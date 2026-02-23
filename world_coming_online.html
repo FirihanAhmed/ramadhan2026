@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The World Coming Online</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1e2e;color:#e4e5ed;font-family:'DM Sans',sans-serif;overflow-x:hidden;min-height:100vh}
+
+.container{display:flex;flex-direction:column;padding:20px 30px}
+
+.header{text-align:center;padding:10px 0 5px}
+.tag{display:inline-block;font-size:0.55rem;color:#f0c040;letter-spacing:2.5px;text-transform:uppercase;border:1px solid rgba(240,192,64,0.25);padding:3px 12px;border-radius:20px;margin-bottom:6px}
+h1{font-family:'DM Serif Display',serif;font-size:2.2rem;background:linear-gradient(135deg,#4f7cff,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{color:#8b8ea5;font-size:0.8rem;margin-top:2px}
+
+.controls{display:flex;align-items:center;justify-content:center;gap:16px;padding:12px 0}
+.year-display{font-family:'JetBrains Mono',monospace;font-size:3rem;font-weight:700;color:rgba(79,124,255,0.25);min-width:120px;text-align:center}
+.play-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid #4f7cff;background:transparent;color:#4f7cff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;transition:all 0.2s}
+.play-btn:hover{background:rgba(79,124,255,0.15)}
+.slider-wrap{flex:1;max-width:500px}
+input[type=range]{width:100%;-webkit-appearance:none;height:3px;background:#2a2f42;border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#4f7cff;cursor:pointer}
+
+.stat-bar{display:flex;justify-content:center;gap:40px;padding:6px 0}
+.stat{text-align:center}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700;color:#4f7cff}
+.stat-label{font-size:0.6rem;color:#7a7e95;letter-spacing:1px;text-transform:uppercase}
+
+.chart-area{position:relative;overflow:hidden;height:55vh;min-height:380px}
+canvas{width:100%;height:100%}
+
+.legend{display:flex;justify-content:center;gap:20px;padding:10px 0;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:0.7rem;color:#b0b3c8}
+.legend-dot{width:9px;height:9px;border-radius:50%}
+.axis-label{text-align:center;font-size:0.7rem;color:#7a7e95;letter-spacing:1px;margin-top:2px}
+
+.insights-section{padding:24px 0 10px}
+.insights-title{font-family:'DM Serif Display',serif;font-size:1.3rem;color:#e4e5ed;text-align:center;margin-bottom:16px}
+.insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:900px;margin:0 auto}
+
+.insight-card{background:#1f2336;border:1px solid #2a2f42;border-radius:14px;padding:20px;position:relative;overflow:hidden}
+.insight-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.insight-card.blue::before{background:linear-gradient(90deg,#4f7cff,transparent)}
+.insight-card.green::before{background:linear-gradient(90deg,#2dd4a0,transparent)}
+.insight-card.gold::before{background:linear-gradient(90deg,#f0c040,transparent)}
+.insight-card.pink::before{background:linear-gradient(90deg,#ff6b8a,transparent)}
+
+.insight-header{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.insight-big{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700;line-height:1}
+.insight-card.blue .insight-big{color:#4f7cff}
+.insight-card.green .insight-big{color:#2dd4a0}
+.insight-card.gold .insight-big{color:#f0c040}
+.insight-card.pink .insight-big{color:#ff6b8a}
+
+.insight-label{font-size:0.8rem;color:#b0b3c8;font-weight:500}
+.insight-body{font-size:0.82rem;color:#9598b0;line-height:1.7}
+.insight-body strong{color:#d8dae8}
+.insight-highlight{font-family:'JetBrains Mono',monospace;font-size:0.8rem;padding:2px 7px;border-radius:4px;margin:0 1px}
+.hl-blue{background:rgba(79,124,255,0.12);color:#6b9aff}
+.hl-green{background:rgba(45,212,160,0.12);color:#50e8b8}
+.hl-gold{background:rgba(240,192,64,0.12);color:#f0c040}
+.hl-pink{background:rgba(255,107,138,0.12);color:#ff8ca8}
+
+.mini-bars{display:flex;align-items:flex-end;gap:3px;height:40px;margin-top:14px}
+.mini-bar{flex:1;border-radius:2px 2px 0 0;position:relative;transition:height 0.3s}
+.mini-bar-label{position:absolute;bottom:-15px;left:50%;transform:translateX(-50%);font-size:0.5rem;color:#7a7e95;white-space:nowrap}
+
+.footer{text-align:center;font-size:0.55rem;color:#4a4e65;letter-spacing:1.5px;text-transform:uppercase;padding:14px 0 8px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="tag">Ramadan Data Challenge 2026 | Project 2</div>
+    <h1>The World Coming Online</h1>
+    <div class="subtitle">Internet users as a percentage of population, 2000 to 2023</div>
+  </div>
+
+  <div class="controls">
+    <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+    <div class="slider-wrap">
+      <input type="range" id="yearSlider" min="2000" max="2023" value="2000" step="0.1" oninput="setYear(+this.value)">
+    </div>
+    <div class="year-display" id="yearDisplay">2000</div>
+  </div>
+
+  <div class="stat-bar">
+    <div class="stat"><div class="stat-val" id="statPct">0%</div><div class="stat-label">World Online</div></div>
+    <div class="stat"><div class="stat-val" id="statUsers">0B</div><div class="stat-label">Total Users</div></div>
+    <div class="stat"><div class="stat-val" id="statTop"></div><div class="stat-label">Most Connected</div></div>
+    <div class="stat"><div class="stat-val" id="statGCC"></div><div class="stat-label">GCC Average</div></div>
+  </div>
+
+  <div class="chart-area">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#4f7cff"></div>Europe</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#38bdf8"></div>Americas</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#2dd4a0"></div>Asia</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f0c040"></div>Middle East</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff6b8a"></div>Africa</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div>Oceania</div>
+  </div>
+  <div class="axis-label">Less Connected                    Internet Users (% of Population)                    More Connected</div>
+
+  <div class="insights-section">
+    <div class="insights-title">Key Insights</div>
+    <div class="insights-grid">
+
+      <div class="insight-card blue">
+        <div class="insight-header">
+          <div class="insight-big">13x</div>
+          <div class="insight-label">Global growth since 2000</div>
+        </div>
+        <div class="insight-body">
+          In 2000, only <span class="insight-highlight hl-blue">413M</span> people were online, mostly in the US, Europe and Japan. 
+          By 2023, <strong>5.4 billion people</strong> are connected. The internet grew faster than any infrastructure in human history.
+        </div>
+        <div class="mini-bars" id="growthBars"></div>
+      </div>
+
+      <div class="insight-card green">
+        <div class="insight-header">
+          <div class="insight-big">3% to 96%</div>
+          <div class="insight-label">Oman's leap</div>
+        </div>
+        <div class="insight-body">
+          Oman went from <span class="insight-highlight hl-green">3%</span> internet penetration in 2000 to <span class="insight-highlight hl-green">96%</span> in 2023, 
+          a <strong>32x increase</strong>. The entire GCC leapfrogged from single digits to near-universal access in two decades.
+        </div>
+        <div class="mini-bars" id="omanBars"></div>
+      </div>
+
+      <div class="insight-card gold">
+        <div class="insight-header">
+          <div class="insight-big">2.2B</div>
+          <div class="insight-label">Still offline</div>
+        </div>
+        <div class="insight-body">
+          Despite the growth, <strong>2.2 billion people</strong> remain offline, mostly in <span class="insight-highlight hl-gold">Sub-Saharan Africa</span> and 
+          <span class="insight-highlight hl-gold">South Asia</span>. India alone has around 670M people without internet access.
+        </div>
+        <div class="mini-bars" id="offlineBars"></div>
+      </div>
+
+      <div class="insight-card pink">
+        <div class="insight-header">
+          <div class="insight-big">10 yrs</div>
+          <div class="insight-label">The fastest leaps</div>
+        </div>
+        <div class="insight-body">
+          Saudi went from <span class="insight-highlight hl-pink">2% to 70%</span> in 15 years. 
+          China brought <strong>1 billion people</strong> online in one generation. 
+          Morocco: 1% to 88%. Mobile was the great equalizer. Many countries skipped desktop entirely.
+        </div>
+        <div class="mini-bars" id="leapBars"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">Source: World Bank and ITU  |  #RamadanDataChallenge</div>
+</div>
+
+<script>
+var countries=[
+["Iceland","Europe",0.37,{2000:44,2005:87,2010:93,2015:98,2020:99,2023:99}],
+["Denmark","Europe",5.8,{2000:39,2005:83,2010:89,2015:97,2020:98,2023:99}],
+["UK","Europe",67,{2000:26,2005:70,2010:85,2015:92,2020:96,2023:97}],
+["Germany","Europe",83,{2000:30,2005:69,2010:82,2015:88,2020:93,2023:95}],
+["France","Europe",67,{2000:14,2005:43,2010:77,2015:85,2020:90,2023:93}],
+["Italy","Europe",59,{2000:23,2005:35,2010:54,2015:66,2020:85,2023:90}],
+["Spain","Europe",47,{2000:14,2005:48,2010:66,2015:79,2020:93,2023:95}],
+["Poland","Europe",38,{2000:7,2005:39,2010:63,2015:73,2020:87,2023:91}],
+["Sweden","Europe",10,{2000:46,2005:85,2010:91,2015:95,2020:97,2023:98}],
+["Russia","Europe",144,{2000:2,2005:15,2010:43,2015:73,2020:85,2023:90}],
+["USA","Americas",331,{2000:43,2005:68,2010:74,2015:75,2020:90,2023:92}],
+["Canada","Americas",38,{2000:51,2005:72,2010:81,2015:89,2020:97,2023:98}],
+["Brazil","Americas",214,{2000:3,2005:21,2010:41,2015:59,2020:81,2023:84}],
+["Mexico","Americas",128,{2000:5,2005:18,2010:31,2015:57,2020:72,2023:79}],
+["Argentina","Americas",45,{2000:7,2005:18,2010:45,2015:71,2020:87,2023:87}],
+["Colombia","Americas",51,{2000:2,2005:11,2010:37,2015:56,2020:73,2023:77}],
+["Chile","Americas",19,{2000:17,2005:32,2010:45,2015:64,2020:88,2023:90}],
+["China","Asia",1412,{2000:2,2005:8,2010:34,2015:50,2020:71,2023:77}],
+["India","Asia",1408,{2000:0.5,2005:2,2010:8,2015:22,2020:43,2023:52}],
+["Japan","Asia",125,{2000:30,2005:67,2010:79,2015:93,2020:92,2023:93}],
+["S. Korea","Asia",52,{2000:44,2005:73,2010:84,2015:90,2020:97,2023:98}],
+["Indonesia","Asia",274,{2000:1,2005:4,2010:11,2015:22,2020:54,2023:66}],
+["Vietnam","Asia",97,{2000:0.3,2005:13,2010:31,2015:53,2020:70,2023:79}],
+["Thailand","Asia",72,{2000:4,2005:15,2010:22,2015:39,2020:78,2023:88}],
+["Philippines","Asia",110,{2000:2,2005:5,2010:25,2015:44,2020:60,2023:68}],
+["Pakistan","Asia",220,{2000:1,2005:7,2010:8,2015:18,2020:36,2023:33}],
+["Bangladesh","Asia",165,{2000:0.1,2005:1,2010:4,2015:14,2020:39,2023:40}],
+["Malaysia","Asia",32,{2000:22,2005:48,2010:56,2015:71,2020:90,2023:97}],
+["Singapore","Asia",5.7,{2000:36,2005:61,2010:72,2015:82,2020:92,2023:96}],
+["UAE","Middle East",10,{2000:24,2005:40,2010:68,2015:91,2020:99,2023:99}],
+["Saudi","Middle East",35,{2000:2,2005:13,2010:41,2015:70,2020:98,2023:99}],
+["Oman","Middle East",5.1,{2000:3,2005:11,2010:31,2015:70,2020:95,2023:96}],
+["Qatar","Middle East",3,{2000:5,2005:25,2010:69,2015:92,2020:99,2023:99}],
+["Bahrain","Middle East",1.5,{2000:6,2005:21,2010:55,2015:93,2020:99,2023:100}],
+["Kuwait","Middle East",4.3,{2000:7,2005:26,2010:39,2015:82,2020:99,2023:99}],
+["Jordan","Middle East",10,{2000:3,2005:13,2010:27,2015:53,2020:80,2023:86}],
+["Turkey","Middle East",85,{2000:4,2005:15,2010:40,2015:54,2020:81,2023:87}],
+["Iran","Middle East",85,{2000:1,2005:10,2010:16,2015:44,2020:84,2023:80}],
+["Egypt","Middle East",104,{2000:1,2005:13,2010:22,2015:38,2020:72,2023:82}],
+["S. Africa","Africa",60,{2000:5,2005:8,2010:24,2015:52,2020:72,2023:75}],
+["Nigeria","Africa",213,{2000:0.1,2005:4,2010:24,2015:42,2020:55,2023:55}],
+["Kenya","Africa",54,{2000:0.3,2005:3,2010:14,2015:35,2020:42,2023:48}],
+["Morocco","Africa",37,{2000:1,2005:15,2010:52,2015:57,2020:84,2023:88}],
+["Ethiopia","Africa",115,{2000:0,2005:0.2,2010:1,2015:12,2020:24,2023:30}],
+["Ghana","Africa",31,{2000:0.2,2005:2,2010:8,2015:35,2020:58,2023:68}],
+["Tanzania","Africa",62,{2000:0.1,2005:1,2010:3,2015:20,2020:35,2023:36}],
+["DR Congo","Africa",96,{2000:0,2005:0.3,2010:0.7,2015:6,2020:23,2023:27}],
+["Australia","Oceania",26,{2000:47,2005:63,2010:76,2015:85,2020:90,2023:96}],
+["New Zealand","Oceania",5,{2000:40,2005:62,2010:83,2015:88,2020:93,2023:96}],
+];
+
+var regionColors={"Europe":"#4f7cff","Americas":"#38bdf8","Asia":"#2dd4a0","Middle East":"#f0c040","Africa":"#ff6b8a","Oceania":"#c084fc"};
+
+function lerp(a,b,t){return a+(b-a)*t}
+function getInternetPct(c,year){
+  var d=c[3],keys=Object.keys(d).map(Number).sort(function(a,b){return a-b});
+  if(year<=keys[0])return d[keys[0]];if(year>=keys[keys.length-1])return d[keys[keys.length-1]];
+  for(var i=0;i<keys.length-1;i++){if(year>=keys[i]&&year<=keys[i+1]){return lerp(d[keys[i]],d[keys[i+1]],(year-keys[i])/(keys[i+1]-keys[i]));}}
+  return 0;
+}
+
+var canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+var currentYear=2000,playing=false,bubbles=[],targetBubbles=[];
+
+function resize(){
+  var rect=canvas.parentElement.getBoundingClientRect();
+  canvas.width=rect.width*2;canvas.height=rect.height*2;
+  canvas.style.width=rect.width+'px';canvas.style.height=rect.height+'px';
+  ctx.setTransform(2,0,0,2,0,0);
+}
+resize();window.addEventListener('resize',function(){resize();setYear(currentYear)});
+
+function computeLayout(year){
+  var W=canvas.width/2,H=canvas.height/2,padX=50,padY=20,chartW=W-padX*2,chartH=H-padY*2;
+  var result=[];
+  countries.forEach(function(c){
+    var pct=getInternetPct(c,year),pop=c[2],r=Math.sqrt(pop)*0.4;
+    if(r<4)r=4;if(r>58)r=58;
+    var regionOrder={"Africa":0.8,"Asia":0.58,"Middle East":0.38,"Americas":0.22,"Europe":0.1,"Oceania":0.03};
+    var baseY=regionOrder[c[1]]||0.5;
+    var hash=0;for(var i=0;i<c[0].length;i++)hash=((hash<<5)-hash)+c[0].charCodeAt(i);
+    var jitter=((hash%1000)/1000-0.5)*0.09;
+    result.push({name:c[0],region:c[1],pop:pop,pct:pct,x:padX+(pct/100)*chartW,y:padY+((baseY+jitter)*chartH),r:r,color:regionColors[c[1]]});
+  });
+  return result;
+}
+
+bubbles=computeLayout(2000);bubbles.forEach(function(b){b.cx=b.x;b.cy=b.y;b.cr=b.r;b.cpct=b.pct});
+
+function setYear(y){
+  currentYear=y;document.getElementById('yearSlider').value=y;
+  document.getElementById('yearDisplay').textContent=Math.round(y);
+  targetBubbles=computeLayout(y);
+  var totalPop=0,totalOnline=0,topName="",topPct=0,gccPop=0,gccOnline=0;
+  targetBubbles.forEach(function(b){
+    totalPop+=b.pop;totalOnline+=b.pop*b.pct/100;
+    if(b.pct>topPct){topPct=b.pct;topName=b.name}
+    if(["UAE","Saudi","Oman","Qatar","Bahrain","Kuwait"].indexOf(b.name)>=0){gccPop+=b.pop;gccOnline+=b.pop*b.pct/100}
+  });
+  document.getElementById('statPct').textContent=Math.round(totalOnline/totalPop*100)+'%';
+  document.getElementById('statUsers').textContent=(totalOnline/1000).toFixed(1)+'B';
+  document.getElementById('statTop').textContent=topName;
+  document.getElementById('statGCC').textContent=Math.round(gccOnline/gccPop*100)+'%';
+}
+
+function draw(){
+  var W=canvas.width/2,H=canvas.height/2;ctx.clearRect(0,0,W,H);
+  if(targetBubbles.length){bubbles.forEach(function(b,i){var t=targetBubbles[i];b.cx+=(t.x-b.cx)*0.1;b.cy+=(t.y-b.cy)*0.1;b.cr+=(t.r-b.cr)*0.1;b.cpct+=(t.pct-b.cpct)*0.1;b.color=t.color;b.name=t.name;b.region=t.region;b.pop=t.pop})}
+  var padX=50,chartW=W-padX*2;
+
+  // Grid lines
+  ctx.strokeStyle='#2a2f42';ctx.lineWidth=0.5;
+  for(var p=0;p<=100;p+=25){
+    var gx=padX+(p/100)*chartW;
+    ctx.beginPath();ctx.moveTo(gx,8);ctx.lineTo(gx,H-8);ctx.stroke();
+    ctx.fillStyle='#7a7e95';ctx.font='bold 10px JetBrains Mono,monospace';ctx.textAlign='center';
+    ctx.fillText(p+'%',gx,H-1);
+  }
+
+  // Sort big first so small ones render on top
+  var sorted=bubbles.slice().sort(function(a,b){return b.cr-a.cr});
+  sorted.forEach(function(b){
+    var isOman = b.name === 'Oman';
+
+    // Outer glow
+    ctx.beginPath();ctx.arc(b.cx,b.cy,b.cr+4,0,Math.PI*2);
+    ctx.fillStyle=b.color+(isOman?'18':'0a');ctx.fill();
+
+    // Bubble fill
+    ctx.beginPath();ctx.arc(b.cx,b.cy,b.cr,0,Math.PI*2);
+    ctx.fillStyle=b.color+(isOman?'50':'30');ctx.fill();
+    ctx.strokeStyle=b.color+(isOman?'cc':'70');
+    ctx.lineWidth=isOman?2:1;ctx.stroke();
+
+    // Country name label
+    if(b.cr>6){
+      var fs=Math.max(7,Math.min(b.cr*0.48,14));
+      if(isOman) fs=Math.max(fs,11);
+
+      // Text shadow for readability
+      ctx.fillStyle='#000';
+      ctx.font='bold '+fs+'px DM Sans,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(b.name,b.cx+0.5,b.cy+1.5);
+
+      // Main text
+      ctx.fillStyle=isOman?'#ffffff':'#d8dae8';
+      ctx.font='bold '+fs+'px DM Sans,sans-serif';
+      ctx.fillText(b.name,b.cx,b.cy+1);
+
+      // Percentage
+      if(b.cr>12){
+        var fs2=Math.max(6,fs*0.7);
+        ctx.fillStyle=isOman?'#2dd4a0':'#b0b3c8';
+        ctx.font='bold '+fs2+'px JetBrains Mono,monospace';
+        ctx.fillText(Math.round(b.cpct)+'%',b.cx,b.cy+fs*0.75+3);
+      }
+    }
+  });
+  requestAnimationFrame(draw);
+}
+draw();setYear(2000);
+
+function buildMiniBars(id,data,color){
+  var el=document.getElementById(id),max=Math.max.apply(null,data.map(function(d){return d.val})),html='';
+  data.forEach(function(d){var h=Math.max(2,(d.val/max)*38);html+='<div class="mini-bar" style="height:'+h+'px;background:'+color+'"><div class="mini-bar-label">'+d.label+'</div></div>'});
+  el.innerHTML=html;
+}
+buildMiniBars('growthBars',[{label:"'00",val:0.41},{label:"'03",val:0.78},{label:"'06",val:1.15},{label:"'09",val:1.73},{label:"'12",val:2.49},{label:"'15",val:3.19},{label:"'18",val:3.92},{label:"'21",val:4.9},{label:"'23",val:5.4}],'#4f7cff');
+buildMiniBars('omanBars',[{label:"'00",val:3},{label:"'05",val:11},{label:"'08",val:20},{label:"'10",val:31},{label:"'13",val:50},{label:"'15",val:70},{label:"'18",val:80},{label:"'20",val:95},{label:"'23",val:96}],'#2dd4a0');
+buildMiniBars('offlineBars',[{label:"S.Asia",val:900},{label:"Africa",val:750},{label:"SE.Asia",val:280},{label:"M.East",val:120},{label:"LatAm",val:90},{label:"Europe",val:50}],'#f0c040');
+buildMiniBars('leapBars',[{label:"Saudi",val:97},{label:"China",val:75},{label:"Morocco",val:87},{label:"Oman",val:93},{label:"Vietnam",val:79},{label:"India",val:52}],'#ff6b8a');
+
+function togglePlay(){playing=!playing;document.getElementById('playBtn').textContent=playing?'||':'▶';if(playing)advanceYear()}
+function advanceYear(){if(!playing)return;currentYear+=0.12;if(currentYear>2023){currentYear=2023;playing=false;document.getElementById('playBtn').textContent='▶';return}setYear(currentYear);requestAnimationFrame(advanceYear)}
+</script>
+</body>
+</html>
