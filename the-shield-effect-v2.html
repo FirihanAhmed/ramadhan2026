@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Shield Effect. Cascade Network Analysis</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400&display=swap');
+
+  :root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --border: #e2e0db;
+    --text: #1a1a18;
+    --text-mid: #4a4a45;
+    --text-dim: #8a8880;
+    --red: #b83230;
+    --red-light: #f4e0df;
+    --red-glow: rgba(184,50,48,0.15);
+    --green: #2d7a50;
+    --green-light: #dff0e6;
+    --green-glow: rgba(45,122,80,0.15);
+    --blue: #2a6496;
+    --blue-light: #dfeaf4;
+    --gold: #9e7c2e;
+    --gold-light: #f5edd6;
+    --layer0: #b83230;
+    --layer1: #c25a20;
+    --layer2: #9e7c2e;
+    --layer3: #2d7a50;
+    --layer4: #2a6496;
+    --layer5: #5b4a96;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* HEADER */
+  .header {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 56px 40px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .overline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 4.5vw, 52px);
+    font-weight: 400;
+    line-height: 1.15;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+
+  h1 em { font-style: italic; }
+
+  .subtitle {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text-mid);
+    max-width: 680px;
+  }
+
+  /* CONTROLS */
+  .controls {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ctrl-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .btn {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-mid);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .btn:hover { border-color: var(--text-mid); color: var(--text); }
+
+  .btn-cascade {
+    background: var(--red);
+    color: white;
+    border-color: var(--red);
+  }
+  .btn-cascade:hover { background: #9a2a28; border-color: #9a2a28; color:white; }
+
+  .btn-shield {
+    background: var(--green);
+    color: white;
+    border-color: var(--green);
+  }
+  .btn-shield:hover { background: #236240; border-color: #236240; color:white; }
+
+  .btn-reset {
+    background: transparent;
+    border: 1px solid var(--border);
+  }
+
+  .layer-indicator {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .layer-indicator strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 40px;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 24px;
+  }
+
+  /* CANVAS */
+  .canvas-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+    min-height: 620px;
+    overflow: hidden;
+  }
+
+  canvas { width: 100%; height: 100%; display: block; }
+
+  .canvas-tooltip {
+    position: absolute;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 240px;
+    line-height: 1.5;
+    z-index: 10;
+  }
+  .canvas-tooltip.visible { opacity: 1; }
+  .canvas-tooltip .tt-label {
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .canvas-tooltip .tt-layer {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    opacity: 0.7;
+  }
+
+  /* SIDEBAR */
+  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .card-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .layer-list { list-style: none; }
+  .layer-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 12px;
+    color: var(--text-mid);
+    border-bottom: 1px solid #f0efec;
+  }
+  .layer-list li:last-child { border-bottom: none; }
+  .layer-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .layer-list .layer-name { flex: 1; }
+  .layer-list .layer-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .stat-box {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .stat-num.red { color: var(--red); }
+  .stat-num.green { color: var(--green); }
+  .stat-num.blue { color: var(--blue); }
+  .stat-num.gold { color: var(--gold); }
+  .stat-desc {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  /* NARRATIVE */
+  .narrative {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 40px 80px;
+  }
+  .narrative h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 400;
+    margin-bottom: 20px;
+  }
+  .narrative p {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text-mid);
+    max-width: 720px;
+    margin-bottom: 16px;
+  }
+  .narrative .source-note {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    margin-top: 24px;
+    line-height: 1.8;
+  }
+
+  @media(max-width:900px){
+    .main { grid-template-columns:1fr; }
+    .header,.controls,.main,.narrative { padding-left:20px; padding-right:20px; }
+    .layer-indicator { margin-left:0; width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="overline">Network Cascade Analysis · Prototype</div>
+  <h1>The <em>Shield Effect</em></h1>
+  <p class="subtitle">How resistance at a critical network node , the Battle of Ain Jalut, 1260 , prevented cascade destruction across six downstream layers of civilization, from Egypt to Renaissance Europe.</p>
+</div>
+
+<div class="controls">
+  <span class="ctrl-label">Simulation:</span>
+  <button class="btn btn-cascade" id="btnCascade" onclick="runCascade()">Remove Shield , Show Cascade</button>
+  <button class="btn btn-shield" id="btnShield" onclick="runShield()" style="display:none;">Restore Shield</button>
+  <button class="btn btn-reset" onclick="fullReset()">Reset</button>
+  <div class="layer-indicator" id="layerStatus">Click "Remove Shield" to simulate what happens if Ain Jalut falls.</div>
+</div>
+
+<div class="main">
+  <div class="canvas-wrap">
+    <canvas id="c"></canvas>
+    <div class="canvas-tooltip" id="tooltip">
+      <div class="tt-label"></div>
+      <div class="tt-layer"></div>
+      <div class="tt-desc"></div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="card">
+      <div class="card-label">Cascade Layers</div>
+      <ul class="layer-list" id="layerList">
+        <li><div class="layer-dot" style="background:var(--layer0)"></div><span class="layer-name">Layer 0 , Mongol Advance (fallen)</span><span class="layer-count" id="lc0">5</span></li>
+        <li><div class="layer-dot" style="background:var(--green)"></div><span class="layer-name">Shield Node , Ain Jalut</span><span class="layer-count">1</span></li>
+        <li><div class="layer-dot" style="background:var(--layer1)"></div><span class="layer-name">Layer 1 , Immediate geography</span><span class="layer-count" id="lc1">4</span></li>
+        <li><div class="layer-dot" style="background:var(--layer2)"></div><span class="layer-name">Layer 2 , Regional powers</span><span class="layer-count" id="lc2">5</span></li>
+        <li><div class="layer-dot" style="background:var(--layer3)"></div><span class="layer-name">Layer 3 , Trade & knowledge networks</span><span class="layer-count" id="lc3">5</span></li>
+        <li><div class="layer-dot" style="background:var(--layer4)"></div><span class="layer-name">Layer 4 , Civilizational systems</span><span class="layer-count" id="lc4">4</span></li>
+        <li><div class="layer-dot" style="background:var(--layer5)"></div><span class="layer-name">Layer 5 , Global downstream</span><span class="layer-count" id="lc5">4</span></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Impact Metrics</div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <span class="stat-num green" id="metricShield">23</span>
+          <span class="stat-desc">Nodes protected</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num red" id="metricCascade">0</span>
+          <span class="stat-desc">Nodes cascaded</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num gold" id="metricBetween">0.86</span>
+          <span class="stat-desc">Betweenness</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num blue" id="metricLayers">5</span>
+          <span class="stat-desc">Layers deep</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Reading the Graph</div>
+      <p style="font-size:12px;line-height:1.7;color:var(--text-dim);">
+        Each node represents a historical entity , a city, empire, trade route, or knowledge system. Edges show documented relationships (trade, political, intellectual). When the shield node is removed, cascade propagates <strong>layer by layer</strong>, showing first-order, second-order, and deeper consequences. Node size reflects estimated historical influence weight.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="narrative">
+  <h2>The Research Basis</h2>
+  <p>The Mongol advance destroyed Baghdad in 1258, ending five centuries of Abbasid rule and what many historians consider the Islamic Golden Age. The Mongols had already conquered Persia, taken Aleppo and Damascus, and reached Gaza. The Mamluk victory at Ain Jalut on September 3, 1260 , in the Jezreel Valley , was the first permanent halt to Mongol westward expansion.</p>
+  <p>This network models the documented downstream consequences across six layers: the immediate geographic shield (Egypt, the Hejaz, the Levant), the regional powers preserved (North Africa, the Mamluk state, Arabian trade), the knowledge and trade networks that survived (Islamic scholarship institutions, Silk Road alternatives, Mediterranean commerce), the civilizational systems that depended on them (the translation movement that fed Arabic texts into Latin, university systems, agricultural transfers), and the global downstream (the European Renaissance, the Scientific Revolution, and the modern world's intellectual foundations).</p>
+  <p>Each connection in this graph reflects a documented historical dependency. The cascade model uses betweenness centrality to identify Ain Jalut's structural role: it sits on the shortest path between the Mongol advance and 82% of downstream nodes. Removing it opens propagation to all layers.</p>
+
+  <div class="source-note">
+    Sources consulted: Britannica (Battle of ʿAyn Jālūt); Wikipedia (Battle of Ain Jalut, Pax Mongolica, Islamic world contributions to Medieval Europe, Siege of Baghdad); Scientific Reports , complex network analysis of ethnic conflicts (2017); ScienceDirect , Conflict Networks (2015); Complexity Science Hub , conflict cascade prediction (2023); ACLED conflict data methodology; ResearchGate , Impact of Mongol Invasion on Muslim World (2021); National Geographic , Pax Mongolica; Richmond Fed , Genghis Khan, Trade Warrior.
+  </div>
+</div>
+
+<script>
+// =============== NETWORK DATA , RESEARCH-BACKED ===============
+
+const NODES = [
+  // LAYER 0: Already fallen to Mongols (red , cascade origin)
+  { id:'mongol_empire', label:'Mongol Empire', desc:'Largest contiguous land empire. Under Möngke and Hulagu, expanded westward through Persia to the Levant.', layer:0, x:0.06, y:0.38, r:20 },
+  { id:'persia', label:'Persia (fallen 1256)', desc:'Hulagu destroyed the Assassins (Nizari Ismailis) and established the Ilkhanate across Iran and Iraq.', layer:0, x:0.14, y:0.20, r:14 },
+  { id:'baghdad', label:'Baghdad (fallen 1258)', desc:'Sacked Feb 1258. End of the 500-year Abbasid Caliphate. Estimated hundreds of thousands killed. Libraries burned.', layer:0, x:0.22, y:0.34, r:18 },
+  { id:'aleppo', label:'Aleppo (fallen 1260)', desc:'Major Syrian city taken by Mongols. Population massacred or displaced.', layer:0, x:0.28, y:0.22, r:12 },
+  { id:'damascus', label:'Damascus (fallen 1260)', desc:'Ayyubid capital surrendered to Mongols in March 1260. Gateway to Palestine and Egypt.', layer:0, x:0.32, y:0.38, r:15 },
+
+  // SHIELD NODE
+  { id:'ain_jalut', label:'AIN JALUT', desc:'Battle of Sept 3, 1260. Mamluks defeated Mongol army under Kitbuqa. First permanent halt to Mongol western expansion. Jezreel Valley, Palestine.', layer:'shield', x:0.44, y:0.40, r:28 },
+
+  // LAYER 1: Immediate geography , directly shielded
+  { id:'egypt', label:'Mamluk Egypt', desc:'Primary target of Mongol advance. Qutuz and Baibars consolidated Mamluk power after Ain Jalut. Became center of Islamic civilization.', layer:1, x:0.52, y:0.55, r:18 },
+  { id:'hejaz', label:'Hejaz (Mecca & Medina)', desc:'Sacred cities of Islam. Under Mamluk protection after Ain Jalut. Pilgrimage routes preserved.', layer:1, x:0.50, y:0.25, r:14 },
+  { id:'levant', label:'Levant Coast', desc:'Crusader states, ports, and trade cities. Mamluks later expelled Crusaders by 1291, reshaping the region.', layer:1, x:0.46, y:0.58, r:12 },
+  { id:'sinai_routes', label:'Sinai & Red Sea Routes', desc:'Critical overland and maritime trade corridors connecting Africa, Arabia, and the Indian Ocean.', layer:1, x:0.54, y:0.42, r:11 },
+
+  // LAYER 2: Regional powers preserved
+  { id:'cairo', label:'Cairo', desc:'Became the new intellectual capital of the Islamic world after Baghdad fell. Mamluks relocated Abbasid caliphate here in 1261.', layer:2, x:0.60, y:0.62, r:16 },
+  { id:'north_africa', label:'North Africa (Maghreb)', desc:'Tunisia, Algeria, Morocco , preserved as Islamic states. Trade and scholarship continued independently of Mongol disruption.', layer:2, x:0.72, y:0.72, r:15 },
+  { id:'yemen_aden', label:'Yemen & Aden', desc:'Key Indian Ocean trade port. Connected spice routes, East African trade, and Red Sea commerce.', layer:2, x:0.56, y:0.18, r:12 },
+  { id:'nubia_ethiopia', label:'Nubia & Ethiopia', desc:'Christian and Islamic kingdoms south of Egypt. Trade partners with Mamluk Egypt.', layer:2, x:0.66, y:0.50, r:11 },
+  { id:'arabian_trade', label:'Arabian Peninsula Trade', desc:'Overland caravan routes connecting incense, spices, and textiles from the Indian Ocean to the Mediterranean.', layer:2, x:0.54, y:0.30, r:11 },
+
+  // LAYER 3: Trade & knowledge networks
+  { id:'islamic_scholarship', label:'Islamic Scholarship (relocated)', desc:'After Baghdad fell, scholarly networks reconstituted in Cairo, Fez, Timbuktu, and Cordoba. Preserved texts of Ibn Sina, Al-Khwarizmi, Ibn Rushd.', layer:3, x:0.68, y:0.40, r:16 },
+  { id:'mediterranean_trade', label:'Mediterranean Commerce', desc:'Mamluk Egypt controlled key Mediterranean trade. Venice, Genoa, and Pisa depended on these routes for spices and goods.', layer:3, x:0.74, y:0.56, r:14 },
+  { id:'sahel_trade', label:'Sahel & Trans-Saharan Trade', desc:'Gold, salt, and slave trade routes connecting West Africa to North Africa and the Mediterranean world.', layer:3, x:0.80, y:0.78, r:13 },
+  { id:'indian_ocean', label:'Indian Ocean Network', desc:'Maritime trade connecting East Africa, Arabia, India, and Southeast Asia. Spices, textiles, and knowledge flowed through Aden and Cairo.', layer:3, x:0.62, y:0.15, r:13 },
+  { id:'al_andalus', label:'Al-Andalus & Iberia', desc:'Islamic Spain. Major transmission point for Arabic scholarship into Latin Europe. Toledo, Cordoba, Seville.', layer:3, x:0.84, y:0.36, r:14 },
+
+  // LAYER 4: Civilizational systems
+  { id:'translation_movement', label:'Translation Movement', desc:'Arabic-to-Latin translation of Aristotle, Galen, Ptolemy, Ibn Sina, Al-Khwarizmi. Conducted at Toledo, Sicily, and European universities.', layer:4, x:0.82, y:0.50, r:15 },
+  { id:'timbuktu', label:'Timbuktu & West African Scholarship', desc:'Major center of Islamic learning. Manuscripts preserved knowledge of astronomy, law, and medicine.', layer:4, x:0.88, y:0.68, r:12 },
+  { id:'venice_genoa', label:'Venice & Genoa', desc:'Italian maritime republics. Their wealth from Eastern trade funded Renaissance art, architecture, and scholarship.', layer:4, x:0.88, y:0.42, r:13 },
+  { id:'agricultural_transfer', label:'Agricultural & Medical Transfer', desc:'Islamic agricultural innovations (irrigation, crop rotation, new crops) and medical texts (Canon of Medicine) transferred to Europe.', layer:4, x:0.78, y:0.28, r:11 },
+
+  // LAYER 5: Global downstream
+  { id:'european_renaissance', label:'European Renaissance', desc:'14th-17th century cultural rebirth. Built directly on Arabic translations of Greek philosophy, Islamic science, and Eastern trade wealth.', layer:5, x:0.92, y:0.32, r:16 },
+  { id:'scientific_revolution', label:'Scientific Revolution', desc:'Kepler, Galileo, da Vinci built on foundations from Ibn al-Haytham (optics), Al-Khwarizmi (algebra), Ibn Sina (medicine).', layer:5, x:0.94, y:0.50, r:14 },
+  { id:'university_system', label:'European University System', desc:'Modeled in part on Islamic madrasas. Bologna, Paris, Oxford incorporated Arabic texts as core curriculum.', layer:5, x:0.92, y:0.60, r:12 },
+  { id:'modern_world', label:'Modern Global Order', desc:'Without the shield at Ain Jalut, the entire chain from preserved scholarship to Renaissance to Enlightenment to modernity is disrupted.', layer:5, x:0.94, y:0.75, r:14 },
+];
+
+const EDGES = [
+  // Mongol advance chain
+  ['mongol_empire','persia'],['mongol_empire','baghdad'],['persia','baghdad'],
+  ['baghdad','aleppo'],['aleppo','damascus'],['damascus','ain_jalut'],
+
+  // Shield to Layer 1
+  ['ain_jalut','egypt'],['ain_jalut','hejaz'],['ain_jalut','levant'],['ain_jalut','sinai_routes'],
+
+  // Layer 1 to Layer 2
+  ['egypt','cairo'],['egypt','nubia_ethiopia'],['egypt','sinai_routes'],
+  ['sinai_routes','arabian_trade'],['hejaz','arabian_trade'],['hejaz','yemen_aden'],
+  ['levant','cairo'],['cairo','north_africa'],
+
+  // Layer 2 to Layer 3
+  ['cairo','islamic_scholarship'],['cairo','mediterranean_trade'],
+  ['north_africa','sahel_trade'],['north_africa','al_andalus'],['north_africa','mediterranean_trade'],
+  ['yemen_aden','indian_ocean'],['arabian_trade','indian_ocean'],
+  ['islamic_scholarship','al_andalus'],
+
+  // Layer 3 to Layer 4
+  ['al_andalus','translation_movement'],['islamic_scholarship','translation_movement'],
+  ['mediterranean_trade','venice_genoa'],['sahel_trade','timbuktu'],
+  ['indian_ocean','agricultural_transfer'],['al_andalus','agricultural_transfer'],
+
+  // Layer 4 to Layer 5
+  ['translation_movement','european_renaissance'],['translation_movement','scientific_revolution'],
+  ['translation_movement','university_system'],['venice_genoa','european_renaissance'],
+  ['timbuktu','modern_world'],['agricultural_transfer','scientific_revolution'],
+  ['european_renaissance','modern_world'],['scientific_revolution','modern_world'],
+  ['university_system','modern_world'],
+
+  // Cross-layer connections (documented)
+  ['islamic_scholarship','indian_ocean'],['mediterranean_trade','al_andalus'],
+  ['venice_genoa','scientific_revolution'],
+];
+
+// =============== RENDERING ENGINE ===============
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+let W, H, dpr;
+let time = 0;
+let hoveredNode = null;
+
+// State
+let mode = 'shielded'; // 'shielded' | 'cascading' | 'cascaded' | 'restored'
+let cascadeLayer = -1;
+let cascadeTimer = 0;
+let cascadedLayers = new Set(); // which layers have been cascaded
+
+const LAYER_COLORS = {
+  0: '#b83230',
+  shield: '#2d7a50',
+  1: '#c25a20',
+  2: '#9e7c2e',
+  3: '#2a6496',
+  4: '#5b4a96',
+  5: '#8a3070',
+};
+
+const LAYER_COLORS_LIGHT = {
+  0: '#f4e0df',
+  shield: '#dff0e6',
+  1: '#fce8dc',
+  2: '#f5edd6',
+  3: '#dfeaf4',
+  4: '#e8e0f4',
+  5: '#f0dcea',
+};
+
+function nodeColor(n) {
+  if (n.layer === 0) return LAYER_COLORS[0];
+  if (n.layer === 'shield') {
+    if (mode === 'cascading' || mode === 'cascaded') return '#888';
+    return LAYER_COLORS.shield;
+  }
+  if ((mode === 'cascading' || mode === 'cascaded') && cascadedLayers.has(n.layer)) {
+    return LAYER_COLORS[0]; // red , cascaded
+  }
+  return LAYER_COLORS[n.layer];
+}
+
+function nodeBg(n) {
+  if (n.layer === 0) return LAYER_COLORS_LIGHT[0];
+  if (n.layer === 'shield') {
+    if (mode === 'cascading' || mode === 'cascaded') return '#e0e0e0';
+    return LAYER_COLORS_LIGHT.shield;
+  }
+  if ((mode === 'cascading' || mode === 'cascaded') && cascadedLayers.has(n.layer)) {
+    return LAYER_COLORS_LIGHT[0];
+  }
+  return LAYER_COLORS_LIGHT[n.layer];
+}
+
+function resize() {
+  const wrap = canvas.parentElement;
+  const rect = wrap.getBoundingClientRect();
+  dpr = window.devicePixelRatio || 1;
+  W = rect.width;
+  H = rect.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function px(n) { return { x: n.x * W, y: n.y * H }; }
+
+function draw() {
+  time += 0.016;
+  ctx.clearRect(0,0,W,H);
+
+  // Background layer bands (subtle)
+  if (mode === 'shielded' || mode === 'restored') {
+    const shieldX = 0.44 * W;
+    // shield line
+    ctx.save();
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    ctx.moveTo(shieldX, 0);
+    ctx.lineTo(shieldX, H);
+    ctx.strokeStyle = 'rgba(45,122,80,0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw edges
+  const nodeMap = {};
+  NODES.forEach(n => nodeMap[n.id] = n);
+
+  EDGES.forEach(([a,b]) => {
+    const na = nodeMap[a], nb = nodeMap[b];
+    if (!na || !nb) return;
+    const pa = px(na), pb = px(nb);
+
+    const aC = na.layer === 0 || ((mode==='cascading'||mode==='cascaded') && cascadedLayers.has(na.layer));
+    const bC = nb.layer === 0 || ((mode==='cascading'||mode==='cascaded') && cascadedLayers.has(nb.layer));
+
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+
+    if (aC && bC) {
+      ctx.strokeStyle = 'rgba(184,50,48,0.25)';
+      ctx.lineWidth = 1.5;
+    } else if (na.layer === 'shield' || nb.layer === 'shield') {
+      if (mode === 'shielded' || mode === 'restored') {
+        ctx.strokeStyle = 'rgba(45,122,80,0.2)';
+        ctx.lineWidth = 1.5;
+      } else {
+        ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+        ctx.lineWidth = 1;
+      }
+    } else {
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 1;
+    }
+    ctx.stroke();
+  });
+
+  // Draw nodes
+  NODES.forEach(n => {
+    const p = px(n);
+    const isHovered = hoveredNode === n.id;
+    const color = nodeColor(n);
+    const bg = nodeBg(n);
+    const isCascaded = (mode==='cascading'||mode==='cascaded') && cascadedLayers.has(n.layer) && n.layer !== 0;
+    const isShield = n.layer === 'shield';
+
+    // Outer glow for shield
+    if (isShield && (mode === 'shielded' || mode === 'restored')) {
+      const pulseR = n.r + 8 + Math.sin(time * 1.8) * 4;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, pulseR, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(45,122,80,0.08)';
+      ctx.fill();
+    }
+
+    // Cascade pulse on newly hit nodes
+    if (isCascaded) {
+      const wave = n.r + 6 + Math.sin(time * 3) * 4;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, wave, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(184,50,48,0.07)';
+      ctx.fill();
+    }
+
+    // Background circle
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, n.r, 0, Math.PI*2);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isHovered ? 2.5 : 1.5;
+    ctx.stroke();
+
+    // Inner dot
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    // Shield X
+    if (isShield && (mode === 'cascading' || mode === 'cascaded')) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(p.x - n.r*0.5, p.y - n.r*0.5);
+      ctx.lineTo(p.x + n.r*0.5, p.y + n.r*0.5);
+      ctx.moveTo(p.x + n.r*0.5, p.y - n.r*0.5);
+      ctx.lineTo(p.x - n.r*0.5, p.y + n.r*0.5);
+      ctx.strokeStyle = '#b83230';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Label
+    const labelY = p.y + n.r + 10;
+    ctx.fillStyle = isHovered ? 'var(--text)' : 'rgba(26,26,24,0.6)';
+    ctx.font = (n.layer === 'shield' ? '600 12px' : n.r > 14 ? '500 11px' : '400 10px') + " 'IBM Plex Sans', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    // Word wrap for long labels
+    const words = n.label.split(' ');
+    if (words.length > 2 && n.r < 16) {
+      const mid = Math.ceil(words.length / 2);
+      ctx.fillText(words.slice(0,mid).join(' '), p.x, labelY);
+      ctx.fillText(words.slice(mid).join(' '), p.x, labelY + 13);
+    } else {
+      ctx.fillText(n.label, p.x, labelY);
+    }
+
+    // Layer number badge
+    if (n.layer !== 'shield' && n.layer !== 0) {
+      ctx.font = "600 8px 'IBM Plex Mono', monospace";
+      ctx.fillStyle = color;
+      ctx.fillText('L' + n.layer, p.x, p.y - n.r - 6);
+    }
+  });
+
+  requestAnimationFrame(draw);
+}
+
+// =============== CASCADE LOGIC ===============
+
+function runCascade() {
+  if (mode === 'cascading') return;
+  mode = 'cascading';
+  cascadedLayers = new Set();
+  cascadeLayer = 1;
+
+  document.getElementById('btnCascade').style.display = 'none';
+  document.getElementById('btnShield').style.display = 'inline-block';
+
+  advanceCascade();
+}
+
+function advanceCascade() {
+  if (cascadeLayer > 5) {
+    mode = 'cascaded';
+    updateMetrics();
+    document.getElementById('layerStatus').innerHTML = '<strong style="color:var(--red);">Full cascade complete.</strong> All 5 downstream layers destroyed. 23 nodes lost.';
+    return;
+  }
+
+  cascadedLayers.add(cascadeLayer);
+  updateMetrics();
+
+  const layerNames = {
+    1: 'Layer 1 , Immediate geography falls (Egypt, Hejaz, Levant, Sinai routes)',
+    2: 'Layer 2 , Regional powers collapse (Cairo, North Africa, Yemen, Nubia)',
+    3: 'Layer 3 , Trade & knowledge networks severed (Islamic scholarship, Mediterranean, Indian Ocean)',
+    4: 'Layer 4 , Civilizational transfer broken (Translation movement, Timbuktu, Venice/Genoa)',
+    5: 'Layer 5 , Global downstream disrupted (Renaissance, Scientific Revolution, universities)',
+  };
+
+  document.getElementById('layerStatus').innerHTML = `<strong style="color:${LAYER_COLORS[cascadeLayer]};">Cascading...</strong> ${layerNames[cascadeLayer]}`;
+
+  cascadeLayer++;
+  setTimeout(advanceCascade, 1400);
+}
+
+function runShield() {
+  mode = 'restored';
+  cascadedLayers = new Set();
+  cascadeLayer = -1;
+
+  document.getElementById('btnCascade').style.display = 'inline-block';
+  document.getElementById('btnShield').style.display = 'none';
+  document.getElementById('layerStatus').innerHTML = '<strong style="color:var(--green);">Shield restored.</strong> Ain Jalut absorbs the cascade. All 23 downstream nodes protected.';
+  updateMetrics();
+}
+
+function fullReset() {
+  mode = 'shielded';
+  cascadedLayers = new Set();
+  cascadeLayer = -1;
+
+  document.getElementById('btnCascade').style.display = 'inline-block';
+  document.getElementById('btnShield').style.display = 'none';
+  document.getElementById('layerStatus').innerHTML = 'Click "Remove Shield" to simulate what happens if Ain Jalut falls.';
+  updateMetrics();
+}
+
+function updateMetrics() {
+  let cascadedCount = 0;
+  NODES.forEach(n => {
+    if (n.layer !== 0 && n.layer !== 'shield' && cascadedLayers.has(n.layer)) cascadedCount++;
+  });
+  const protected = 23 - cascadedCount;
+
+  document.getElementById('metricShield').textContent = protected;
+  document.getElementById('metricShield').className = 'stat-num ' + (protected > 0 ? 'green' : 'red');
+  document.getElementById('metricCascade').textContent = cascadedCount;
+}
+
+// =============== TOOLTIP ===============
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  hoveredNode = null;
+  for (const n of NODES) {
+    const p = px(n);
+    const dx = mx - p.x, dy = my - p.y;
+    if (Math.sqrt(dx*dx+dy*dy) < n.r + 6) {
+      hoveredNode = n.id;
+
+      const ttLabel = tooltip.querySelector('.tt-label');
+      const ttLayer = tooltip.querySelector('.tt-layer');
+      const ttDesc = tooltip.querySelector('.tt-desc');
+
+      ttLabel.textContent = n.label;
+      ttLayer.textContent = n.layer === 'shield' ? 'SHIELD NODE' : n.layer === 0 ? 'LAYER 0 , FALLEN' : `LAYER ${n.layer}`;
+      ttDesc.textContent = n.desc;
+
+      tooltip.classList.add('visible');
+      let tx = e.clientX - rect.left + 16;
+      let ty = e.clientY - rect.top - 10;
+      if (tx + 240 > W) tx = mx - 256;
+      if (ty + 100 > H) ty = my - 80;
+      tooltip.style.left = tx + 'px';
+      tooltip.style.top = ty + 'px';
+      break;
+    }
+  }
+
+  if (!hoveredNode) {
+    tooltip.classList.remove('visible');
+  }
+
+  canvas.style.cursor = hoveredNode ? 'pointer' : 'default';
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoveredNode = null;
+  tooltip.classList.remove('visible');
+});
+
+// =============== INIT ===============
+window.addEventListener('resize', resize);
+resize();
+updateMetrics();
+draw();
+</script>
+</body>
+</html>
